@@ -1,0 +1,18 @@
+{
+  "name": "lyra",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7"
+  },
+  "dependencies": {
+    "@ai-sdk/deepseek": "^3.0.73",
+    "@ai-sdk/openai": "^4.0.102",
+    "ai": "^7.0.153",
+    "zod": "^4.6.7"
+  }
+}
