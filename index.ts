@@ -3,10 +3,9 @@ import { deepSeek } from "@ai-sdk/deepseek"
 import { z } from 'zod';
 import path, { resolve } from "node:path";
 import { readFileSync } from 'node:fs';
-import { isBindingPattern } from 'typescript/unstable/ast';
 import { execSync } from 'node:child_process';
 
-// TODO: split code to multiple files
+// TODO: Create better description (type and description builder) for each tool see (https://vercel.com/academy/build-ai-agent-harness/descriptions-that-work#hands-on-exercise-21)
 const AiModelName = 'lyra';
 
 const cwd = resolve(process.cwd());
@@ -88,7 +87,50 @@ EXAMPLES:
       }
     }
   }
-})
+});
+
+const allowedList = ["ls", "pwd", "echo", "git status", "git log", "git diff"];
+
+interface Shell {
+  exec(command: string): Promise<{stdout: string, exitCode: number}>
+}
+
+// TODO: Enhance create shell tool
+function createShellTool(operations: Shell, safeCommands: string[]) {
+  function isSafeCommand(command: string): boolean {
+    return safeCommands.some((c) => command.trim().startsWith(c));
+  }
+
+  const shellTool = tool({
+    description: `Execute a shell (powershell) command in the current working directory.
+  WHEN TO USE: running build command, installing package, running tests, git operations, directory listing.
+  WHEN NOT TO USE: read file content (use read instead), searching across files (use grep instead).`,
+    inputSchema: z.object({
+      command: z.string().describe("Shell command to execute"),
+    }),
+    execute: async (payload) => {
+      if (!isSafeCommand(payload.command)) {
+        return `BLOCKED: "${payload.command}" requires approval, Only safe commands that can be executed ${safeCommands}`
+      }
+      const { stdout } = await operations.exec(payload.command);
+      return stdout || "(no output)"
+    }
+  });
+  
+  return shellTool;
+}
+
+const powershellLocalShell: Shell = {
+  exec: async (command: string) => {
+    try {
+      const stdout = execSync(command, {timeout: 30 * 1000, shell: "powershell", encoding: "utf-8"});
+      return {stdout, exitCode: 0}
+    } catch (error: any) {
+        return {stdout: error.stdout || error.stderr || error.messages || "", exitCode: error.status || 1};
+    }
+  }
+}
+
 
 const agent = new ToolLoopAgent({
   model: deepSeek('deepseek-flash'),
@@ -96,7 +138,8 @@ const agent = new ToolLoopAgent({
   stopWhen: stepCountIs(10),
   tools: {
     read: readTool,
-    grep: grepTool
+    grep: grepTool,
+    shell: createShellTool(powershellLocalShell, allowedList),
   }
 });
 
