@@ -1,13 +1,13 @@
 import { ToolLoopAgent, stepCountIs, tool } from 'ai';
 import { deepSeek } from "@ai-sdk/deepseek"
 import { z } from 'zod';
-import path, { resolve } from "node:path";
-import { readFileSync } from 'node:fs';
+import path, { join, resolve } from "node:path";
+import { existsSync, readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { systemInstruction } from './system';
+import { buildSystemPrompt, type PromptContext } from './system';
 
 // TODO: Create better description (type and description builder) for each tool see (https://vercel.com/academy/build-ai-agent-harness/descriptions-that-work#hands-on-exercise-21)
-const AiModelName = 'lyra';
+const agentName = 'lyra';
 
 const cwd = resolve(process.cwd());
 
@@ -133,10 +133,20 @@ const powershellLocalShell: Shell = {
   }
 }
 
+const agentsPath = join(cwd, "AGENT.md");
+const projectContext = existsSync(agentsPath) ? readFileSync(agentsPath, "utf-8") : undefined;
+
+const systemPromptContext: PromptContext = {
+  agentName,
+  sandboxType: "local",
+  toolNames: ["read", "grep", "shell"],
+  workingDirectory: cwd,
+  projectContext
+}
 
 const agent = new ToolLoopAgent({
   model: deepSeek('deepseek-flash'),
-  instructions: systemInstruction,
+  instructions: buildSystemPrompt(systemPromptContext),
   stopWhen: stepCountIs(10),
   tools: {
     read: readTool,
