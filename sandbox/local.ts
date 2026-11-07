@@ -7,8 +7,12 @@ export class LocalSandbox implements Sandbox {
   public readonly type: string = 'local';
   public workingDirectory: string;
 
-  constructor(cwd: string) {
+  private constructor(cwd: string) {
     this.workingDirectory = cwd;
+  }
+
+  static async make(cwd: string): Promise<LocalSandbox> {
+    return new LocalSandbox(cwd);
   }
 
   public async readFile(path: string): Promise<string> {
