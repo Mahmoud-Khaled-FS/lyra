@@ -1,4 +1,4 @@
-import { ToolLoopAgent, stepCountIs } from 'ai';
+import { ToolLoopAgent, pruneMessages, stepCountIs } from 'ai';
 import { deepSeek } from '@ai-sdk/deepseek';
 import { join, resolve } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
@@ -11,7 +11,7 @@ const agentName = 'lyra';
 
 const cwd = resolve(process.cwd());
 
-const sandbox: Sandbox = await InMemorySandbox.make(cwd);
+const sandbox: Sandbox = await LocalSandbox.make(cwd);
 console.log(`Sand box: ${sandbox.type}`);
 
 const agentsPath = join(cwd, 'AGENT.md');
@@ -34,8 +34,16 @@ const systemPromptContext: PromptContext = {
 const agent = new ToolLoopAgent({
   model: deepSeek('deepseek-flash'),
   instructions: buildSystemPrompt(systemPromptContext),
-  stopWhen: stepCountIs(10),
+  stopWhen: stepCountIs(15),
   tools,
+  onStepEnd: (data) => {
+    console.log(`Step (${data.stepNumber}) ${data.usage.inputTokens} input, ${data.usage.outputTokens} output`);
+  },
+  prepareStep: (data) => {
+    return {
+      messages: pruneMessages({ messages: data.messages, toolCalls: 'before-last-3-messages' }),
+    };
+  },
 });
 
 if (process.argv.length <= 2) {
