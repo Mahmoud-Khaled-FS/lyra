@@ -4,6 +4,7 @@ import { z } from 'zod';
 import path, { resolve } from "node:path";
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { systemInstruction } from './system';
 
 // TODO: Create better description (type and description builder) for each tool see (https://vercel.com/academy/build-ai-agent-harness/descriptions-that-work#hands-on-exercise-21)
 const AiModelName = 'lyra';
@@ -96,6 +97,7 @@ interface Shell {
 }
 
 // TODO: Enhance create shell tool
+// TODO: create better approval and security shell
 function createShellTool(operations: Shell, safeCommands: string[]) {
   function isSafeCommand(command: string): boolean {
     return safeCommands.some((c) => command.trim().startsWith(c));
@@ -134,7 +136,7 @@ const powershellLocalShell: Shell = {
 
 const agent = new ToolLoopAgent({
   model: deepSeek('deepseek-flash'),
-  instructions: `You are a helpful assistant.\nYour name is ${AiModelName}`,
+  instructions: systemInstruction,
   stopWhen: stepCountIs(10),
   tools: {
     read: readTool,
